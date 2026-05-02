@@ -180,6 +180,9 @@ text.bl  { font-family: "JetBrainsMono Nerd Font"; fill: var(--all-bl); font-siz
 
 /* Sym  - bot-right */
 text.br  { font-family: "JetBrainsMono Nerd Font"; fill: var(--all-br); font-size: 11px; font-weight: 600; fill-opacity: 1; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; transform: translate(-2px, -2px); }
+
+/* Hold label (home row mods) */
+text.hold { font-family: "JetBrainsMono Nerd Font"; fill: var(--all-tap); font-size: 10px; fill-opacity: 0.6; }
 </style>
 <g transform="translate(30, 0)" class="layer-Base">
 <text x="0" y="28" class="label" id="Base">Base:</text>
