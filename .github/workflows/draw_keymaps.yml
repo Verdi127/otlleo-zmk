@@ -72,7 +72,7 @@ jobs:
         run: |
           mkdir -p keymap-drawer/all_layers
           keymap -c keymap-drawer/configs/config-all-layers.yaml draw -j config/qwerty.json \
-            keymap-drawer/all_layers/qwerty.yaml > keymap-drawer/all_layers/all_layers.svg --keys-only
+            keymap-drawer/all_layers/qwerty.yaml > keymap-drawer/all_layers/all_layers.svg
 
       - name: Export composite legend-wrap overrides from stacked config
         run: |
