@@ -13,6 +13,6 @@ features:
 siblings:
   - otello_left_bt
   - otello_right_bt
-  - otello_left_dongle
-  - otello_right_dongle
+  - otello_left
+  - otello_right
   - otello_dongle
