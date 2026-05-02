@@ -4,7 +4,7 @@ draw_config:
   key_h: 60
   key_rx: 6.0
   key_ry: 6.0
-  dark_mode: true
+  dark_mode: false
   draw_key_sides: false
   # add breathing room around each keycap
   inner_pad_w: 4.0

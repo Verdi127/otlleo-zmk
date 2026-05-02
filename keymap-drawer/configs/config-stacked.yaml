@@ -123,7 +123,7 @@ draw_config:
     /* Num  - top-right */
     text.tr  { font-family: "JetBrainsMono Nerd Font"; fill: var(--stack-tr); font-size: 11px; font-weight: 600; fill-opacity: 1; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; transform: translate(-2px, 2px); }
 
-    /* Game - bot-left */
+    /* Pointer - bot-left */
     text.bl  { font-family: "JetBrainsMono Nerd Font"; fill: var(--stack-bl); font-size: 11px; font-weight: 600; fill-opacity: 1; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; transform: translate(2px, -2px); }
 
     /* Sym  - bot-right */

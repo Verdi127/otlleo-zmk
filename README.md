@@ -4,7 +4,7 @@
 
 This repository contains a ZMK firmware configuration for a wireless otello setup with dongle support and trackball features.
 
-Based on [280Zo/otello-wireless-mini-zmk-firmware](https://github.com/280Zo/otello-wireless-mini-zmk-firmware).
+Based on [280Zo/charybdis-wireless-mini-zmk-firmware](https://github.com/280Zo/charybdis-wireless-mini-zmk-firmware).
 
 The project is currently organized around one source keymap file:
 
@@ -85,7 +85,7 @@ Trackball/input processor settings are in [config/trackball/otello_pointer.dtsi]
 
 ## Credits
 
-- [280Zo](https://github.com/280Zo/otello-wireless-mini-zmk-firmware) for the original repository this was based on
+- [280Zo](https://github.com/280Zo/charybdis-wireless-mini-zmk-firmware) for the original repository this was based on
 - [badjeff](https://github.com/badjeff) for PMW3610 driver work used as the basis for the trackball integration
 - [eigatech](https://github.com/eigatech) for reference patterns around split/dongle otello setups
 - [nickcoutsos](https://github.com/nickcoutsos/keymap-editor) for the keymap-editor workflow
