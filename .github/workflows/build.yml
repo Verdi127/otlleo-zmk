@@ -1,0 +1,438 @@
+name: Build and Release ZMK Firmware
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+# ──────────────────────────────────────────────────────────────
+#  SET-UP read build.yaml & save matrix JSON as groups
+# ──────────────────────────────────────────────────────────────
+  build-matrix:
+    name: Build Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      groups:         ${{ steps.make-groups.outputs.groups }}
+      release-groups: ${{ steps.make-groups.outputs.release-groups }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check pyyaml
+
+      - id: make-groups
+        name: Build matrix from build.yaml
+        shell: python3 {0}
+        run: |
+          import itertools
+          import json
+          import os
+          import yaml
+
+          with open("build.yaml") as f:
+              config = yaml.safe_load(f)
+
+          def as_list(value, default=None):
+              if value is None:
+                  return [] if default is None else list(default)
+              if isinstance(value, list):
+                  return value
+              return [value]
+
+          def shields_from(item):
+              if "shield" in item:
+                  return as_list(item["shield"])
+              if "shields" in item:
+                  return as_list(item["shields"])
+              return []
+
+          def overlay_target(shield):
+              if shield == "settings_reset":
+                  return "settings_reset"
+              return shield.split(" ", 1)[0]
+
+          groups = []
+          for entry in config.get("include", []):
+              entry_boards = as_list(entry.get("board"))
+              entry_keymaps = as_list(entry.get("keymap"), [None])
+              entry_extra_conf_files = as_list(entry.get("extra_conf_files"))
+              entry_extra_dtc_overlay_files = as_list(entry.get("extra_dtc_overlay_files"))
+              entry_builds = entry.get("builds") or []
+
+              if entry_builds:
+                  for build in entry_builds:
+                      build_boards = as_list(build.get("board"), entry_boards)
+                      build_shields = shields_from(build)
+                      build_keymaps = as_list(build.get("keymap"), entry_keymaps)
+                      build_extra_conf_files = as_list(
+                          build.get("extra_conf_files"), entry_extra_conf_files
+                      )
+                      build_extra_dtc_overlay_files = as_list(
+                          build.get("extra_dtc_overlay_files"), entry_extra_dtc_overlay_files
+                      )
+
+                      for board, shield, keymap in itertools.product(
+                          build_boards, build_shields, build_keymaps
+                      ):
+                          groups.append({
+                              "board": board,
+                              "shield": shield,
+                              "target": overlay_target(shield),
+                              "keymap": keymap,
+                              "snippet": entry.get("snippet"),
+                              "name": entry.get(
+                                  "name",
+                                  f"{board}-{shield}" + (f"-{keymap}" if keymap else ""),
+                              ),
+                              "format": entry.get("format", "uf2"),
+                              "extra_conf_files": ";".join(build_extra_conf_files),
+                              "extra_dtc_overlay_files": ";".join(
+                                  build_extra_dtc_overlay_files
+                              ),
+                          })
+              else:
+                  entry_shields = shields_from(entry)
+                  for board, shield, keymap in itertools.product(
+                      entry_boards, entry_shields, entry_keymaps
+                  ):
+                      groups.append({
+                          "board": board,
+                          "shield": shield,
+                          "target": overlay_target(shield),
+                          "keymap": keymap,
+                          "snippet": entry.get("snippet"),
+                          "name": entry.get(
+                              "name",
+                              f"{board}-{shield}" + (f"-{keymap}" if keymap else ""),
+                          ),
+                          "format": entry.get("format", "uf2"),
+                          "extra_conf_files": ";".join(entry_extra_conf_files),
+                          "extra_dtc_overlay_files": ";".join(
+                              entry_extra_dtc_overlay_files
+                          ),
+                      })
+
+          # Unique (name, keymap) pairs drive the group-artifacts matrix.
+          # Pattern: "otello-{name}-*-{keymap}" or "otello-{name}-*" for no-keymap.
+          seen = set()
+          release_groups = []
+          for g in groups:
+              key = (g["name"], g["keymap"])
+              if key not in seen:
+                  seen.add(key)
+                  km_suffix = f"-{g['keymap']}" if g["keymap"] else ""
+                  release_groups.append({
+                      "name":    g["name"],
+                      "keymap":  g["keymap"],
+                      "pattern": f"otello-{g['name']}-*{km_suffix}",
+                  })
+
+          groups_json = json.dumps(groups, separators=(",", ":"))
+          release_groups_json = json.dumps(release_groups, separators=(",", ":"))
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"groups={groups_json}\n")
+              fh.write(f"release-groups={release_groups_json}\n")
+
+          print("Build Matrix:")
+          print(json.dumps(groups, indent=2))
+          print("Release Groups:")
+          print(json.dumps(release_groups, indent=2))
+
+
+# ──────────────────────────────────────────────────────────────
+#  BUILD
+# ──────────────────────────────────────────────────────────────
+  build:
+    name: Build (${{ matrix.group.shield }}${{ matrix.group.keymap && format(' [{0}]', matrix.group.keymap) || '' }})
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    container: zmkfirmware/zmk-build-arm:stable
+
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJson(needs.build-matrix.outputs.groups) }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Initialise West workspace
+      shell: bash
+      run: |
+        set -euxo pipefail
+        echo "Initializing the west workspace using local manifest at config/west.yml"
+        west init -l "$GITHUB_WORKSPACE/config"
+        west update
+        echo "Exporting Zephyr for external build system integration."
+        west zephyr-export
+
+        # # ───────── DEBUG LOGS ─────────
+        # echo ""
+        # echo "Debug Logs"
+        # echo "Top dir  : $(west topdir)"
+        # echo "Projects :"
+        # ls -1 $(west topdir)     # you'll see zmk, zephyr, modules/ …
+        # echo "West workspace ready. Project structure:"
+        # west list
+
+    # ───────── copy otello/ conf files to top-level config ─────────
+    # ZMK searches for ${ZMK_CONFIG}/<shield>.conf and prefix variants,
+    # it does not descend into subdirectories, so otello/*.conf must be copied up.
+    - name: Copy otello shared conf files
+      shell: bash
+      run: |
+        for f in "$GITHUB_WORKSPACE/config/otello/"*.conf; do
+          [ -f "$f" ] && cp "$f" "$GITHUB_WORKSPACE/config/$(basename "$f")"
+        done
+
+    # ───────── verify keymaps under config/keymaps/ ─────────
+    - name: Verify requested keymap exists
+      if: ${{ matrix.group.keymap && matrix.group.keymap != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        km="${{ matrix.group.keymap }}"
+        f1="config/keymaps/${km}.keymap"
+        f2="config/${km}.keymap"
+        if [[ -f "$f1" ]]; then
+          echo "Found $f1"
+        elif [[ -f "$f2" ]]; then
+          echo "Found $f2"
+        else
+          echo "[ERROR] Missing keymap file: $f1 (or $f2)"
+          exit 1
+        fi
+
+    # ───────── Build ─────────
+    - name: Build ${{ matrix.group.shield }}${{ matrix.group.keymap && format(' [{0}]', matrix.group.keymap) || '' }}
+      shell: bash
+      working-directory: zmk/app
+      run: |
+        set -euo pipefail
+
+        KM="${{ matrix.group.keymap }}"
+        NM="${{ matrix.group.name }}"
+        BD="${{ matrix.group.board }}"
+        SH="${{ matrix.group.shield }}"
+        TARGET="${{ matrix.group.target }}"
+        EXTRA_CONF_FILES="${{ matrix.group.extra_conf_files }}"
+        EXTRA_DTC_OVERLAY_FILES="${{ matrix.group.extra_dtc_overlay_files }}"
+
+        CONFIG_DIR="$GITHUB_WORKSPACE/config"
+        BUILD_DIR=$(mktemp -d)
+
+        # Apply studio-rpc-usb-uart to USB central shields only.
+        # otello_right_bt is the central in BT split mode.
+        # otello_dongle is the central in dongle mode.
+        # Peripherals (left_bt, left_dongle, right_dongle) don't need it.
+        if [[ "$TARGET" == "otello_right_bt" || "$TARGET" == "otello_dongle" ]]; then
+          SNIPPET_OPTION="-DSNIPPET=studio-rpc-usb-uart"
+        else
+          SNIPPET_OPTION=""
+        fi
+
+        EXTRA_CONF_OPTION=""
+        if [[ -n "${EXTRA_CONF_FILES:-}" ]]; then
+          EXTRA_CONF_PATHS=()
+          IFS=';' read -r -a EXTRA_CONF_ARRAY <<< "$EXTRA_CONF_FILES"
+          for conf_file in "${EXTRA_CONF_ARRAY[@]}"; do
+            [[ -n "$conf_file" ]] && EXTRA_CONF_PATHS+=("$CONFIG_DIR/$conf_file")
+          done
+          if [[ ${#EXTRA_CONF_PATHS[@]} -gt 0 ]]; then
+            EXTRA_CONF_JOINED="$(IFS=';'; echo "${EXTRA_CONF_PATHS[*]}")"
+            EXTRA_CONF_OPTION="-DEXTRA_CONF_FILE=$EXTRA_CONF_JOINED"
+          fi
+        fi
+
+        EXTRA_DTC_OVERLAY_OPTION=""
+        if [[ -n "${EXTRA_DTC_OVERLAY_FILES:-}" ]]; then
+          EXTRA_DTC_OVERLAY_PATHS=()
+          IFS=';' read -r -a EXTRA_DTC_OVERLAY_ARRAY <<< "$EXTRA_DTC_OVERLAY_FILES"
+          for overlay_file in "${EXTRA_DTC_OVERLAY_ARRAY[@]}"; do
+            [[ -n "$overlay_file" ]] && EXTRA_DTC_OVERLAY_PATHS+=("$CONFIG_DIR/$overlay_file")
+          done
+          if [[ ${#EXTRA_DTC_OVERLAY_PATHS[@]} -gt 0 ]]; then
+            EXTRA_DTC_OVERLAY_JOINED="$(IFS=';'; echo "${EXTRA_DTC_OVERLAY_PATHS[*]}")"
+            EXTRA_DTC_OVERLAY_OPTION="-DEXTRA_DTC_OVERLAY_FILE=$EXTRA_DTC_OVERLAY_JOINED"
+          fi
+        fi
+
+        # Copy the selected keymap into the config dir named after the shield.
+        # ZMK's cmake finds keymaps by searching for ${shield}.keymap in ZMK_CONFIG.
+        if [[ -n "${KM:-}" ]]; then
+          if [[ -f "$CONFIG_DIR/keymaps/${KM}.keymap" ]]; then
+            cp "$CONFIG_DIR/keymaps/${KM}.keymap" "$CONFIG_DIR/${TARGET}.keymap"
+          elif [[ -f "$CONFIG_DIR/${KM}.keymap" ]]; then
+            cp "$CONFIG_DIR/${KM}.keymap" "$CONFIG_DIR/${TARGET}.keymap"
+          else
+            echo "[ERROR] Requested keymap not found in config/keymaps or config root: ${KM}.keymap"
+            exit 1
+          fi
+        elif [[ -f "$CONFIG_DIR/otello.keymap" ]]; then
+          cp "$CONFIG_DIR/otello.keymap" "$CONFIG_DIR/${TARGET}.keymap"
+        fi
+
+        echo "Build vars"
+        echo "> Keymap (KM): $KM"
+        echo "> Name   (NM): $NM"
+        echo "> Board  (BD): $BD"
+        echo "> Shield (SH): $SH"
+        echo "> Target (TARGET): $TARGET"
+        echo "> Dir        : $(pwd)"
+        echo "> Snippet    : $SNIPPET_OPTION"
+        echo "> Extra conf : $EXTRA_CONF_OPTION"
+        echo "> Extra dts  : $EXTRA_DTC_OVERLAY_OPTION"
+        echo "> Build dir  : $BUILD_DIR"
+
+        # ──────────────────────────────────────────────────────────────
+        echo "west build..."
+        west build -p \
+          -d "$BUILD_DIR" \
+          -b "$BD" \
+          -- \
+          "-DZMK_CONFIG=$CONFIG_DIR" \
+          "-DZMK_EXTRA_MODULES=$GITHUB_WORKSPACE/boards;$GITHUB_WORKSPACE/zmk-pmw3610-driver" \
+          "-DSHIELD=$SH" \
+          $EXTRA_CONF_OPTION \
+          $EXTRA_DTC_OVERLAY_OPTION \
+          $SNIPPET_OPTION
+        # ──────────────────────────────────────────────────────────────
+
+        ART=$(if [[ -f "$BUILD_DIR/zephyr/zmk.uf2" ]]; then echo zmk.uf2; else echo zmk.bin; fi)
+        EXT="${ART##*.}"
+        # Include keymap in filename so multiple keymaps for the same shield don't overwrite.
+        FNAME="${SH}${KM:+-${KM}}.${EXT}"
+        mkdir -p "$GITHUB_WORKSPACE/out/$NM"
+        cp "$BUILD_DIR/zephyr/$ART" "$GITHUB_WORKSPACE/out/$NM/$FNAME"
+
+    - name: Upload firmware bundle
+      uses: actions/upload-artifact@v7
+      with:
+        # Include group name so group-artifacts patterns are trivial: otello-{name}-*-{keymap}
+        name: otello-${{ matrix.group.name }}-${{ matrix.group.shield }}${{ matrix.group.keymap && format('-{0}', matrix.group.keymap) || '' }}
+        path: ${{ github.workspace }}/out/${{ matrix.group.name }}/**
+
+# ──────────────────────────────────────────────────────────────
+#  GROUP - merge per-shield artifacts into logical bundles
+# ──────────────────────────────────────────────────────────────
+  group-artifacts:
+    name: Group ${{ matrix.group.name }}${{ matrix.group.keymap && format(' [{0}]', matrix.group.keymap) || '' }}
+    needs: [build, build-matrix]
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        group: ${{ fromJson(needs.build-matrix.outputs.release-groups) }}
+
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: ${{ matrix.group.pattern }}
+        merge-multiple: true
+        path: firmware/
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: grouped-${{ matrix.group.name }}${{ matrix.group.keymap && format('-{0}', matrix.group.keymap) || '' }}
+        path: firmware/
+
+# ──────────────────────────────────────────────────────────────
+#  CLEANUP - delete the individual per-shield artifacts
+# ──────────────────────────────────────────────────────────────
+  cleanup-artifacts:
+    name: Clean up per-shield artifacts
+    needs: group-artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+    - uses: geekyeggo/delete-artifact@v6
+      with:
+        name: otello-*
+
+# ──────────────────────────────────────────────────────────────
+#  RELEASE - zip grouped bundles and attach to the tag release
+# ──────────────────────────────────────────────────────────────
+  release-firmware:
+    name: Release Firmware
+    needs: group-artifacts
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    permissions: { contents: write }
+
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: grouped-*
+        path: combo-artifacts/
+
+    - name: Verify firmware files exist
+      working-directory: combo-artifacts
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! find . -maxdepth 2 -type f \( -name "*.uf2" -o -name "*.bin" \) | grep -q .; then
+          echo "[ERROR] No firmware files found in combo-artifacts"
+          find . -maxdepth 2 -type f
+          exit 1
+        fi
+
+    - name: Upload packaged firmware artifacts (main branch)
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v7
+      with:
+        name: firmware
+        path: |
+          combo-artifacts/*.uf2
+          combo-artifacts/*.bin
+          combo-artifacts/*/*.uf2
+          combo-artifacts/*/*.bin
+
+    - uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Firmware Release ${{ github.ref_name }}
+        files: |
+          combo-artifacts/*.uf2
+          combo-artifacts/*.bin
+          combo-artifacts/*/*.uf2
+          combo-artifacts/*/*.bin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ──────────────────────────────────────────────────────────────
+#  CLEANUP - delete grouped temporary artifacts after release
+# ──────────────────────────────────────────────────────────────
+  cleanup-grouped-artifacts:
+    name: Clean up grouped temporary artifacts
+    needs: [group-artifacts, release-firmware]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+    - uses: geekyeggo/delete-artifact@v6
+      with:
+        name: grouped-*

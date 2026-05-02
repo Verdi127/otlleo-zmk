@@ -1,0 +1,9 @@
+﻿/*
+ * Placeholder file.
+ * Custom behaviors are currently disabled in this keymap setup.
+ */
+
+/ {
+    behaviors {
+    };
+};

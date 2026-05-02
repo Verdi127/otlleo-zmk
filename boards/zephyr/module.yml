@@ -1,0 +1,4 @@
+name: otello-boards
+build:
+  settings:
+    board_root: ..

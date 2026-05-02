@@ -1,0 +1,9 @@
+﻿/*
+ * Placeholder file.
+ * Custom macros are currently disabled in this keymap setup.
+ */
+
+/ {
+    macros {
+    };
+};

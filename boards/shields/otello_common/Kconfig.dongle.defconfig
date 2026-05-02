@@ -1,0 +1,30 @@
+if SHIELD_otello_DONGLE
+
+config ZMK_KEYBOARD_NAME
+	default "otello"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+	default y
+
+endif
+
+if SHIELD_otello_DONGLE_LEFT
+
+config ZMK_KEYBOARD_NAME
+	default "otello_left"
+
+endif
+
+if SHIELD_otello_DONGLE_RIGHT
+
+config ZMK_KEYBOARD_NAME
+	default "otello_right"
+
+endif
+
+if SHIELD_otello_DONGLE_LEFT || SHIELD_otello_DONGLE_RIGHT || SHIELD_otello_DONGLE
+
+config ZMK_SPLIT
+	default y
+
+endif

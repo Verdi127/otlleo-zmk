@@ -1,0 +1,18 @@
+file_format: "1"
+id: otello_nano
+name: otello_nano
+type: shield
+url: https://github.com/Bastardkb/otello/
+requires: [pro_micro]
+features:
+  - Keys
+  - QWERTY
+  - Mouse keys pointer
+  - Trackball pointer
+  - Dongle/Bluetooth/USB
+siblings:
+  - otello_left_bt
+  - otello_right_bt
+  - otello_left_dongle
+  - otello_right_dongle
+  - otello_dongle

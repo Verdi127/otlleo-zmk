@@ -1,0 +1,10 @@
+/*
+ * Combo definitions are intentionally empty for now.
+ * Keep this file so combo bindings can be re-added later.
+ */
+
+/ {
+    combos {
+        compatible = "zmk,combos";
+    };
+};

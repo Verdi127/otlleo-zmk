@@ -1,0 +1,16 @@
+# Build matrix describing every board/shield/keymap combo to build.
+# Each entry under `include` becomes a single matrix item in CI and
+# the local build script.
+
+board: [ nice_nano//zmk ]
+
+include:
+
+# ── Standard Dongle Firmwares ─────────────────────────────────────────────────
+  - name: otello_firmware
+    board: nice_nano//zmk
+    shield:
+      - otello_left
+      - otello_right
+      - otello_dongle
+
