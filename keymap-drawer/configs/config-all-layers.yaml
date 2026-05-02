@@ -86,6 +86,9 @@ draw_config:
     /* Sym  - bot-right */
     text.br  { font-family: "JetBrainsMono Nerd Font"; fill: var(--all-br); font-size: 11px; font-weight: 600; fill-opacity: 1; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; transform: translate(-2px, -2px); }
 
+    /* Hold label (home row mods) */
+    text.hold { font-family: "JetBrainsMono Nerd Font"; fill: var(--all-tap); font-size: 10px; fill-opacity: 0.6; }
+
   shrink_wide_legends: 7
   style_layer_activators: true
   glyph_tap_size: 14
