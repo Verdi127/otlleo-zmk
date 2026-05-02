@@ -256,9 +256,12 @@ parse_config:
     "&td_bs":            {t: "BS L_NUM",    type: thumb}
 
     # --- Mouse Clicks ---
-    "&mkp LCLK": "L CLK"
-    "&mkp RCLK": "R CLK"
-    "&mkp MCLK": "Mid CLK"
+    "&mkp LCLK": "MB1"
+    "&mkp RCLK": "MB2"
+    "&mkp MCLK": "MB3"
+    "&mkp MB1": "MB1"
+    "&mkp MB2": "MB2"
+    "&mkp MB3": "MB3"
     "&mkp MB4": "BACK"
     "&mkp MB5": "FORWARD"
 
