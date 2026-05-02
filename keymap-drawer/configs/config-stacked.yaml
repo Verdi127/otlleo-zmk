@@ -146,14 +146,14 @@ parse_config:
     type: trans
   mark_alternate_layer_activators: false
   modifier_fn_map:
-    left_ctrl: Ctl
-    right_ctrl: Ctl
-    left_shift: Sft
-    right_shift: Sft
-    left_alt: Alt
-    right_alt: AGr
-    left_gui: Gui
-    right_gui: Gui
+    left_ctrl: LC
+    right_ctrl: RC
+    left_shift: LS
+    right_shift: RS
+    left_alt: LA
+    right_alt: RA
+    left_gui: LG
+    right_gui: RG
     keycode_combiner: "{mods}+ {key}"
     mod_combiner: "{mod_1}+{mod_2}"
     special_combinations:
@@ -242,6 +242,7 @@ parse_config:
     C_AC_PASTE: "\uf0ea"
     C_AL_COFFEE: "\uf023"
     PRINTSCREEN: "SCREEN SHOT"
+    ESCAPE: "esc"
     BACKSPACE: "BS"
     LC(LA(E)): "FIT"
     LS(DELETE): "SHRED"

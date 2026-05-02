@@ -89,7 +89,7 @@ draw_config:
   shrink_wide_legends: 7
   style_layer_activators: true
   glyph_tap_size: 14
-  glyph_hold_size: 12
+  glyph_hold_size: 10
   glyph_shifted_size: 10
   glyphs: {}
 parse_config:
@@ -103,14 +103,14 @@ parse_config:
     type: trans
   mark_alternate_layer_activators: false
   modifier_fn_map:
-    left_ctrl: Ctl
-    right_ctrl: Ctl
-    left_shift: Sft
-    right_shift: Sft
-    left_alt: Alt
-    right_alt: AGr
-    left_gui: Gui
-    right_gui: Gui
+    left_ctrl: LCtrl
+    right_ctrl: RCtrl
+    left_shift: LShift
+    right_shift: RShift
+    left_alt: LAlt
+    right_alt: RAlt
+    left_gui: LGui
+    right_gui: RGui
     keycode_combiner: "{mods}+ {key}"
     mod_combiner: "{mod_1}+{mod_2}"
     special_combinations:
@@ -199,6 +199,7 @@ parse_config:
     C_AC_PASTE: "PASTE"
     C_AL_COFFEE: "COFFEE"
     PRINTSCREEN: "SCREEN-SHOT"
+    ESCAPE: "esc"
     BACKSPACE: "BS"
     LC(LA(E)): "FIT"
     LS(DELETE): "SHRED"
