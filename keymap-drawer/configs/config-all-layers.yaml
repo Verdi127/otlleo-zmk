@@ -103,14 +103,14 @@ parse_config:
     type: trans
   mark_alternate_layer_activators: false
   modifier_fn_map:
-    left_ctrl: LCtrl
-    right_ctrl: RCtrl
-    left_shift: LShift
-    right_shift: RShift
-    left_alt: LAlt
-    right_alt: RAlt
-    left_gui: LGui
-    right_gui: RGui
+    left_ctrl: Ctl
+    right_ctrl: Ctl
+    left_shift: Sft
+    right_shift: Sft
+    left_alt: Alt
+    right_alt: AGr
+    left_gui: Gui
+    right_gui: Gui
     keycode_combiner: "{mods}+ {key}"
     mod_combiner: "{mod_1}+{mod_2}"
     special_combinations:
@@ -231,22 +231,16 @@ parse_config:
     C_NEXT: "NEXT"
     SPACE: "SPACE"
   raw_binding_map:
-    # --- Hold-tap / Home Row Mods (legacy + shared) ---
-    "&ht_left LCMD A":          {t: A,     h: "Gui"}
-    "&ht_left LALT S":          {t: S ,    h: "Alt"}
-    "&ht_left LSHFT D":         {t: D,     h: "Shift"}
-    "&ht_left LCTRL F":         {t: F,     h: "Ctrl"}
-    "&ht_right RCTRL J":        {t: J,     h: "Ctrl"}
-    "&ht_right RSHFT K":        {t: K,     h: "Shift"}
-    "&ht_right LALT L":         {t: L,     h: "Alt"}
-    "&ht_right RCMD SEMICOLON": {t: ";",   h: "Gui"}
-
-    # --- Tap-preferred right-hand variants ---
-    "&ht_right_tp LALT L":      {t: L,     h: "Alt"}
-    "&ht_right_tp RCMD SEMICOLON": {t: ";", h: "Gui"}
-    "&ht_right_tp LALT I":      {t: I,     h: "Alt"}
-    "&ht_right_tp RCMD O":      {t: O,     h: "Gui"}
-    "&ht_left_tp LCMD A":       {t: A,     h: "Gui"}
+    # --- Hold-tap / Home Row Mods (current &hm bindings) ---
+    "&hm TAB A":                {t: A,     h: "Tab"}
+    "&hm LEFT_ALT S":           {t: S,     h: "Alt"}
+    "&hm LCTRL D":              {t: D,     h: "Ctrl"}
+    "&hm LSHIFT F":             {t: F,     h: "Shift"}
+    "&hm RSHIFT J":             {t: J,     h: "Shift"}
+    "&hm LCTRL K":              {t: K,     h: "Ctrl"}
+    "&hm RIGHT_ALT L":          {t: L,     h: "Alt"}
+    "&hm RIGHT_GUI SEMICOLON":  {t: ";",   h: "Gui"}
+    "&hm ESCAPE Z":             {t: Z,     h: "Esc"}
     
     # --- Tap Dance ---
     "&td_clk": {t: "SYM LFT-CLK", type: thumb}

@@ -47,7 +47,6 @@ def resolve(raw, raw_binding_map: dict) -> str:
     Handles:
     - Plain strings that may be raw ZMK binding refs (e.g. "&mm_f7")
     - Already-parsed dicts (e.g. {t: ▽, type: trans})
-    - HRM keys: strips the hold/modifier symbol, returns only the tap letter
     - BT keys with both t+h fields: joins as "BT 0" etc.
     """
     if raw is None or raw == "":
@@ -59,9 +58,6 @@ def resolve(raw, raw_binding_map: dict) -> str:
             return ""
         t = str(raw.get("t", raw.get("tap", "")) or "")
         h = str(raw.get("h", raw.get("hold", "")) or "")
-        # Home-row mods: show only the letter, not the modifier glyph
-        if key_type == "hrm":
-            return t
         # Keys with both a label and a sublabel (e.g. BT 0): join them
         if t and h:
             return f"{t} {h}"
